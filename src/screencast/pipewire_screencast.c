@@ -98,8 +98,8 @@ static void pwr_handle_stream_state_changed(void *data,
 	}
 }
 
-static void pwr_handle_stream_param_changed(void *data, uint32_t id,
-		const struct spa_pod *param) {
+void pwr_change_stream_param(void *data, uint32_t id) {
+	logprint(TRACE, "pipewire: stream parameters changed");
 	struct xdpw_screencast_instance *cast = data;
 	struct pw_stream *stream = cast->stream;
 	uint8_t params_buffer[1024];
@@ -107,11 +107,6 @@ static void pwr_handle_stream_param_changed(void *data, uint32_t id,
 		SPA_POD_BUILDER_INIT(params_buffer, sizeof(params_buffer));
 	const struct spa_pod *params[2];
 
-	if (!param || id != SPA_PARAM_Format) {
-		return;
-	}
-
-	spa_format_video_raw_parse(param, &cast->pwr_format);
 
 	params[0] = spa_pod_builder_add_object(&b,
 		SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers,
@@ -126,7 +121,22 @@ static void pwr_handle_stream_param_changed(void *data, uint32_t id,
 		SPA_PARAM_META_type, SPA_POD_Id(SPA_META_Header),
 		SPA_PARAM_META_size, SPA_POD_Int(sizeof(struct spa_meta_header)));
 
+	logprint(TRACE, "pipewire: stream update parameters");
 	pw_stream_update_params(stream, params, 2);
+}
+
+static void pwr_handle_stream_param_changed(void *data, uint32_t id,
+		const struct spa_pod *param) {
+	logprint(TRACE, "pipewire: handle change stream parameters");
+	struct xdpw_screencast_instance *cast = data;
+
+	if (!param || id != SPA_PARAM_Format) {
+		return;
+	}
+
+	spa_format_video_raw_parse(param, &cast->pwr_format);
+
+	pwr_change_stream_param(cast, id);
 }
 
 static const struct pw_stream_events pwr_stream_events = {
