@@ -9,5 +9,6 @@
 void xdpw_pwr_stream_init(struct xdpw_screencast_instance *cast);
 int xdpw_pwr_core_connect(struct xdpw_state *state);
 void xdpw_pwr_stream_destroy(struct xdpw_screencast_instance *cast);
+void pwr_change_stream_param(void *data, uint32_t id);
 
 #endif
