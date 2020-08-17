@@ -105,8 +105,15 @@ void pwr_change_stream_param(void *data, uint32_t id) {
 	uint8_t params_buffer[1024];
 	struct spa_pod_builder b =
 		SPA_POD_BUILDER_INIT(params_buffer, sizeof(params_buffer));
-	const struct spa_pod *params[2];
+	const struct spa_pod *params[3];
 
+	enum spa_video_format format = xdpw_format_pw_from_wl_shm(cast);
+	enum spa_video_format format_without_alpha =
+		xdpw_format_pw_strip_alpha(format);
+	uint32_t n_formats = 1;
+	if (format_without_alpha != SPA_VIDEO_FORMAT_UNKNOWN) {
+		n_formats++;
+	}
 
 	params[0] = spa_pod_builder_add_object(&b,
 		SPA_TYPE_OBJECT_ParamBuffers, SPA_PARAM_Buffers,
@@ -121,8 +128,26 @@ void pwr_change_stream_param(void *data, uint32_t id) {
 		SPA_PARAM_META_type, SPA_POD_Id(SPA_META_Header),
 		SPA_PARAM_META_size, SPA_POD_Int(sizeof(struct spa_meta_header)));
 
+	params[2] = spa_pod_builder_add_object(&b,
+		SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat,
+		SPA_FORMAT_mediaType,       SPA_POD_Id(SPA_MEDIA_TYPE_video),
+		SPA_FORMAT_mediaSubtype,    SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw),
+		SPA_FORMAT_VIDEO_format,    SPA_POD_CHOICE_ENUM_Id(n_formats + 1,
+			format, format, format_without_alpha),
+		SPA_FORMAT_VIDEO_size,      SPA_POD_CHOICE_RANGE_Rectangle(
+			&SPA_RECTANGLE(cast->simple_frame.width, cast->simple_frame.height),
+			&SPA_RECTANGLE(1, 1),
+			&SPA_RECTANGLE(4096, 4096)),
+		// variable framerate
+		SPA_FORMAT_VIDEO_framerate, SPA_POD_Fraction(&SPA_FRACTION(0, 1)),
+		SPA_FORMAT_VIDEO_maxFramerate, SPA_POD_CHOICE_RANGE_Fraction(
+			&SPA_FRACTION(cast->framerate, 1),
+			&SPA_FRACTION(1, 1),
+			&SPA_FRACTION(cast->framerate, 1)));
+
+
 	logprint(TRACE, "pipewire: stream update parameters");
-	pw_stream_update_params(stream, params, 2);
+	pw_stream_update_params(stream, params, 3);
 }
 
 static void pwr_handle_stream_param_changed(void *data, uint32_t id,
