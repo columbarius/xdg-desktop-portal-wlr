@@ -303,7 +303,6 @@ static bool exec_chooser(char *cmd, bool readin, int p1[2], int p2[2]) {
 		perror("fork");
 		return false;
 	} else if (pid == 0) {
-		close(p1[1]);
 		close(p2[0]);
 
 		if (readin) {
@@ -326,7 +325,6 @@ static bool exec_chooser(char *cmd, bool readin, int p1[2], int p2[2]) {
 
 	close(p1[0]);
 	close(p2[1]);
-	close(p1[1]);
 
 	wait(NULL);
 
@@ -366,6 +364,10 @@ struct xdpw_wlr_output *wlr_output_chooser(struct xdpw_output_chooser *chooser, 
 		fclose(f);
 		readin = true;
 	}
+	else {
+		close(p1[1]);
+	}
+
 
 	if (exec_chooser(chooser->cmd, readin, p1, p2)) {
 		f = fdopen(p2[0], "r");
@@ -379,7 +381,6 @@ struct xdpw_wlr_output *wlr_output_chooser(struct xdpw_output_chooser *chooser, 
 			return NULL;
 		}
 		fclose(f);
-		close(p2[0]);
 
 		//Strip newline
 		char *p = strchr(name, '\n');
@@ -395,6 +396,10 @@ struct xdpw_wlr_output *wlr_output_chooser(struct xdpw_output_chooser *chooser, 
 			}
 		}
 	}
+	else {
+		close(p2[0]);
+	}
+
 	free(name);
 	return NULL;
 }
