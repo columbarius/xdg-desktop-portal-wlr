@@ -188,16 +188,22 @@ static const struct pw_stream_events pwr_stream_events = {
 
 void xdpw_pwr_import_buffer(struct xdpw_screencast_instance *cast) {
 	struct pw_buffer *pw_buf;
+	struct spa_buffer *spa_buf;
+	struct spa_data *d;
 
 	logprint(TRACE, "pipewire: importing buffer");
 
 	if ((pw_buf = pw_stream_dequeue_buffer(cast->stream)) == NULL) {
 		logprint(WARN, "pipewire: out of buffers");
-		cast->current_pw_buffer = pw_buf;
+		cast->simple_frame.current_pw_buffer = pw_buf;
 		return;
 	}
 
-	cast->current_pw_buffer = pw_buf;
+	spa_buf = pw_buf->buffer;
+	d = spa_buf->datas;
+	cast->simple_frame.current_pw_buffer = pw_buf;
+	cast->simple_frame.size = d[0].chunk->size;
+	cast->simple_frame.stride = d[0].chunk->stride;
 }
 
 void xdpw_pwr_export_buffer(struct xdpw_screencast_instance *cast) {
@@ -208,7 +214,7 @@ void xdpw_pwr_export_buffer(struct xdpw_screencast_instance *cast) {
 
 	logprint(TRACE, "pipewire: exporting buffer");
 
-	pw_buf = cast->current_pw_buffer;
+	pw_buf = cast->simple_frame.current_pw_buffer;
 
 	if (!pw_buf) {
 		logprint(TRACE, "pipewire: no pipewire buffer to queue");
@@ -243,7 +249,7 @@ void xdpw_pwr_export_buffer(struct xdpw_screencast_instance *cast) {
 queue:
 	pw_stream_queue_buffer(cast->stream, pw_buf);
 
-	cast->current_pw_buffer = NULL;
+	cast->simple_frame.current_pw_buffer = NULL;
 }
 
 void pwr_update_stream_param(struct xdpw_screencast_instance *cast) {

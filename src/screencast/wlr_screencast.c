@@ -129,7 +129,7 @@ static void wlr_frame_buffer_done(void *data,
 
 	if (!cast->quit && !cast->err && cast->pwr_stream_state) {
 		xdpw_pwr_import_buffer(cast);
-		if(!cast->current_pw_buffer) {
+		if(!cast->simple_frame.current_pw_buffer) {
 			xdpw_wlr_frame_free(cast);
 			return;
 		}
