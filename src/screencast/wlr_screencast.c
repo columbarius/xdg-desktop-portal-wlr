@@ -64,6 +64,8 @@ static void wlr_frame_linux_dmabuf(void *data,
 static void wlr_frame_buffer_done(void *data,
 		struct zwlr_screencopy_frame_v1 *frame) {
 	struct xdpw_screencast_instance *cast = data;
+	bool changed = false;
+	bool incompatible = false;
 
 	logprint(TRACE, "wlroots: buffer_done event handler");
 	if (cast->pwr_stream_state) {
@@ -77,10 +79,17 @@ static void wlr_frame_buffer_done(void *data,
 	}
 
 	// Check if announced screencopy information is compatible with pipewire meta
-	if (!(cast->pwr_format.format == xdpw_format_pw_from_wl_shm(cast->screencopy_frame.format) ||
-		cast->pwr_format.format == xdpw_format_pw_strip_alpha(xdpw_format_pw_from_wl_shm(cast->screencopy_frame.format))) ||
-		cast->pwr_format.size.width != cast->screencopy_frame.width ||
-		cast->pwr_format.size.height != cast->screencopy_frame.height) {
+	switch (cast->screencopy_type) {
+	case XDPW_SCREENCOPY_SHM:
+		changed = !(cast->pwr_format.format == xdpw_format_pw_from_wl_shm(cast->screencopy_frame.format) ||
+			cast->pwr_format.format == xdpw_format_pw_strip_alpha(xdpw_format_pw_from_wl_shm(cast->screencopy_frame.format))) ||
+			cast->pwr_format.size.width != cast->screencopy_frame.width ||
+			cast->pwr_format.size.height != cast->screencopy_frame.height;
+		break;
+	default:
+		abort();
+	}
+	if (changed) {
 		logprint(DEBUG, "wlroots: pipewire and wlroots metadata are incompatible. Renegotiate stream");
 
 		xdpw_pwr_export_buffer(cast);
@@ -92,8 +101,15 @@ static void wlr_frame_buffer_done(void *data,
 	}
 
 	// Check if imported buffer is compatible with announced buffer
-	if (cast->simple_frame.size != cast->screencopy_frame.size ||
-		cast->simple_frame.stride != cast->screencopy_frame.stride) {
+	switch (cast->screencopy_type) {
+	case XDPW_SCREENCOPY_SHM:
+		incompatible = cast->simple_frame.size != cast->screencopy_frame.size ||
+			cast->simple_frame.stride != cast->screencopy_frame.stride;
+		break;
+	default:
+		abort();
+	}
+	if (incompatible) {
 		logprint(DEBUG, "wlroots: imported buffer has wrong dimensions");
 		xdpw_pwr_export_buffer(cast);
 		xdpw_wlr_frame_free(cast);
