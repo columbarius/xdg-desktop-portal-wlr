@@ -14,8 +14,11 @@
 #include "logger.h"
 
 static struct spa_pod *build_format(struct spa_pod_builder *b, enum spa_video_format format,
-		uint32_t width, uint32_t height, uint32_t framerate) {
-	struct spa_pod_frame f[1];
+		uint32_t width, uint32_t height, uint32_t framerate,
+		uint64_t *modifiers, int modifier_count)
+{
+	struct spa_pod_frame f[2];
+	int i, c;
 
 	enum spa_video_format format_without_alpha = xdpw_format_pw_strip_alpha(format);
 
@@ -28,6 +31,18 @@ static struct spa_pod *build_format(struct spa_pod_builder *b, enum spa_video_fo
 	} else {
 		spa_pod_builder_add(b, SPA_FORMAT_VIDEO_format,
 				SPA_POD_CHOICE_ENUM_Id(3, format, format, format_without_alpha), 0);
+	}
+	if (modifier_count > 0) {
+		// build and enumeration of modifiers
+		spa_pod_builder_prop(b, SPA_FORMAT_VIDEO_modifier, SPA_POD_PROP_FLAG_MANDATORY);
+		spa_pod_builder_push_choice(b, &f[1], SPA_CHOICE_Enum, 0);
+		// mofifiers from the array
+		for (i = 0, c = 0; i < modifier_count; i++) {
+			spa_pod_builder_long(b, modifiers[i]);
+			if (c++ == 0)
+				spa_pod_builder_long(b, modifiers[i]);
+		}
+		spa_pod_builder_pop(b, &f[1]);
 	}
 	spa_pod_builder_add(b, SPA_FORMAT_VIDEO_size,
 		SPA_POD_Rectangle(&SPA_RECTANGLE(width, height)),
@@ -261,7 +276,8 @@ void pwr_update_stream_param(struct xdpw_screencast_instance *cast) {
 	enum spa_video_format format = xdpw_format_pw_from_drm_fourcc(cast->screencopy_frame.format);
 
 	params[0] = build_format(&b, format,
-			cast->screencopy_frame.width, cast->screencopy_frame.height, cast->framerate);
+			cast->screencopy_frame.width, cast->screencopy_frame.height, cast->framerate,
+			NULL, 0);
 
 	pw_stream_update_params(stream, params, 1);
 }
@@ -291,7 +307,8 @@ void xdpw_pwr_stream_create(struct xdpw_screencast_instance *cast) {
 	enum spa_video_format format = xdpw_format_pw_from_drm_fourcc(cast->screencopy_frame.format);
 
 	const struct spa_pod *param = build_format(&b, format,
-			cast->screencopy_frame.width, cast->screencopy_frame.height, cast->framerate);
+			cast->screencopy_frame.width, cast->screencopy_frame.height, cast->framerate,
+			NULL, 0);
 
 	pw_stream_add_listener(cast->stream, &cast->stream_listener,
 		&pwr_stream_events, cast);
