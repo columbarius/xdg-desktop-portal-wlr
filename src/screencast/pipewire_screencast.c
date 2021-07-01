@@ -71,7 +71,7 @@ static void pwr_handle_stream_param_changed(void *data, uint32_t id,
 	uint8_t params_buffer[1024];
 	struct spa_pod_builder b =
 		SPA_POD_BUILDER_INIT(params_buffer, sizeof(params_buffer));
-	const struct spa_pod *params[3];
+	const struct spa_pod *params[4];
 
 	if (!param || id != SPA_PARAM_Format) {
 		return;
@@ -99,7 +99,12 @@ static void pwr_handle_stream_param_changed(void *data, uint32_t id,
 		SPA_PARAM_META_type, SPA_POD_Id(SPA_META_VideoDamage),
 		SPA_PARAM_META_size, SPA_POD_Int(sizeof(struct spa_meta_region)));
 
-	pw_stream_update_params(stream, params, 3);
+	params[3] = spa_pod_builder_add_object(&b,
+		SPA_TYPE_OBJECT_ParamMeta, SPA_PARAM_Meta,
+		SPA_PARAM_META_type, SPA_POD_Id(SPA_META_VideoCrop),
+		SPA_PARAM_META_size, SPA_POD_Int(sizeof(struct spa_meta_region)));
+
+	pw_stream_update_params(stream, params, 4);
 }
 
 static void pwr_handle_stream_add_buffer(void *data, struct pw_buffer *buffer) {
@@ -199,6 +204,7 @@ void xdpw_pwr_export_buffer(struct xdpw_screencast_instance *cast) {
 	struct spa_buffer *spa_buf;
 	struct spa_meta_header *h;
 	struct spa_meta_region *damage;
+	struct spa_meta_region *crop;
 	struct spa_data *d;
 
 	logprint(TRACE, "pipewire: exporting buffer");
@@ -226,6 +232,13 @@ void xdpw_pwr_export_buffer(struct xdpw_screencast_instance *cast) {
 		damage->region.size.height = cast->simple_frame.damage.height;
 	}
 
+	if ((crop = spa_buffer_find_meta_data(spa_buf, SPA_META_VideoCrop, sizeof(*crop)))) {
+		crop->region.position.x = cast->simple_frame.crop.x;
+		crop->region.position.y = cast->simple_frame.crop.y;
+		crop->region.size.width = cast->simple_frame.crop.width;
+		crop->region.size.height = cast->simple_frame.crop.height;
+	}
+
 	if (cast->simple_frame.y_invert) {
 		//TODO: Flip buffer or set stride negative
 	}
@@ -240,6 +253,9 @@ void xdpw_pwr_export_buffer(struct xdpw_screencast_instance *cast) {
 	logprint(TRACE, "pipewire: damage %u,%u (%ux%u)",
 			cast->simple_frame.damage.x, cast->simple_frame.damage.y,
 			cast->simple_frame.damage.width, cast->simple_frame.damage.height);
+	logprint(TRACE, "pipewire: crop %u,%u (%ux%u)",
+			cast->simple_frame.crop.x, cast->simple_frame.crop.y,
+			cast->simple_frame.crop.width, cast->simple_frame.crop.height);
 	logprint(TRACE, "********************");
 
 	pw_stream_queue_buffer(cast->stream, pw_buf);

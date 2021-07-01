@@ -41,6 +41,13 @@ struct xdpw_frame_damage {
 	uint32_t height;
 };
 
+struct xdpw_frame_crop {
+	uint32_t x;
+	uint32_t y;
+	uint32_t width;
+	uint32_t height;
+};
+
 struct xdpw_frame {
 	uint32_t size;
 	uint32_t stride;
@@ -48,6 +55,7 @@ struct xdpw_frame {
 	uint64_t tv_sec;
 	uint32_t tv_nsec;
 	struct xdpw_frame_damage damage;
+	struct xdpw_frame_crop crop;
 	struct wl_buffer *buffer;
 	struct pw_buffer *current_pw_buffer;
 };
