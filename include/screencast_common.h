@@ -48,6 +48,12 @@ struct xdpw_frame_crop {
 	uint32_t height;
 };
 
+enum xdpw_cropmode {
+	XDPW_CROP_NONE,
+	XDPW_CROP_WLROOTS,
+	XDPW_CROP_PIPEWIRE,
+};
+
 struct xdpw_frame {
 	uint32_t size;
 	uint32_t stride;
@@ -97,6 +103,7 @@ struct xdpw_screencast_instance {
 	struct xdpw_screencast_context *ctx;
 	bool initialized;
 	struct xdpw_frame simple_frame;
+	enum xdpw_cropmode cropmode;
 
 	// pipewire
 	struct pw_stream *stream;

@@ -232,7 +232,7 @@ void xdpw_pwr_export_buffer(struct xdpw_screencast_instance *cast) {
 		damage->region.size.height = cast->simple_frame.damage.height;
 	}
 
-	if ((crop = spa_buffer_find_meta_data(spa_buf, SPA_META_VideoCrop, sizeof(*crop)))) {
+	if (cast->cropmode == XDPW_CROP_PIPEWIRE && (crop = spa_buffer_find_meta_data(spa_buf, SPA_META_VideoCrop, sizeof(*crop)))) {
 		crop->region.position.x = cast->simple_frame.crop.x;
 		crop->region.position.y = cast->simple_frame.crop.y;
 		crop->region.size.width = cast->simple_frame.crop.width;
