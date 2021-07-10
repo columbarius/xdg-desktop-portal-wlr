@@ -198,14 +198,22 @@ static void pwr_handle_stream_add_buffer(void *data, struct pw_buffer *buffer) {
 
 		struct xdpw_pwr_screencopy_dmabuf_frame *frame = calloc(1,sizeof(struct xdpw_pwr_screencopy_dmabuf_frame));
 
-		uint32_t flags = GBM_BO_USE_RENDERING;
+		if (cast->pwr_format.modifier == DRM_FORMAT_MOD_INVALID) {
+			uint32_t flags = GBM_BO_USE_RENDERING;
 
-		if (cast->ctx->state->config->screencast_conf.force_mod_linear)
-			flags |= GBM_BO_USE_LINEAR;
+			if (cast->ctx->state->config->screencast_conf.force_mod_linear)
+				flags |= GBM_BO_USE_LINEAR;
 
-		frame->bo = gbm_bo_create(cast->ctx->gbm,
-				cast->screencopy_dmabuf_frame.width, cast->screencopy_dmabuf_frame.height,
-				cast->screencopy_dmabuf_frame.fourcc, flags);
+			frame->bo = gbm_bo_create(cast->ctx->gbm,
+					cast->screencopy_dmabuf_frame.width, cast->screencopy_dmabuf_frame.height,
+					cast->screencopy_dmabuf_frame.fourcc, flags);
+		} else {
+			uint64_t *modifiers = (uint64_t*)&cast->pwr_format.modifier;
+
+			frame->bo = gbm_bo_create_with_modifiers(cast->ctx->gbm,
+					cast->screencopy_dmabuf_frame.width, cast->screencopy_dmabuf_frame.height,
+					cast->screencopy_dmabuf_frame.fourcc, modifiers, 1);
+		}
 
 		if (frame->bo == NULL) {
 			logprint(ERROR, "wlroots: failed to create gbm_bo");
